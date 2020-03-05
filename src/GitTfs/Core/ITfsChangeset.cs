@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using GitTfs.Util;
 
 namespace GitTfs.Core
 {
@@ -9,6 +10,8 @@ namespace GitTfs.Core
         int BaseChangesetId { get; }
         LogEntry Apply(string lastCommit, IGitTreeModifier treeBuilder, ITfsWorkspace workspace, IDictionary<string, GitObject> initialTree, Action<Exception> ignorableErrorHandler, Util.FileFilter filters);
         LogEntry CopyTree(IGitTreeModifier treeBuilder, ITfsWorkspace workspace);
+
+        bool HasChanges(FileFilter filter);
 
         /// <summary>
         /// Get all items (files and folders) in the source TFS repository.

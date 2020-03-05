@@ -380,6 +380,14 @@ namespace GitTfs.Core
                     if (lastChangesetIdToFetch > 0 && changeset.Summary.ChangesetId > lastChangesetIdToFetch)
                         return fetchResult;
                     string parentCommitSha = null;
+
+                    if (!changeset.HasChanges(Filters))
+                    {
+                        MaxChangesetId = changeset.Summary.ChangesetId;
+                        fetchResult.LastFetchedChangesetId = changeset.Summary.ChangesetId;
+                        continue;
+                    }
+
                     if (changeset.IsMergeChangeset && !ProcessMergeChangeset(changeset, stopOnFailMergeCommit, ref parentCommitSha))
                     {
                         fetchResult.NewChangesetCount--; // Merge wasn't successful - so don't count the changeset we found
@@ -746,9 +754,6 @@ namespace GitTfs.Core
 
         private IEnumerable<ITfsChangeset> FetchChangesets(bool byLots, int lastVersion = -1)
         {
-            // TODO: (performance) If mappings then fetch only the changesets from the specific
-            // paths and not from the whole trunk 
-
             int lowerBoundChangesetId;
 
             // If we're starting at the Root side of a branch commit (e.g. C1), but there ar
@@ -765,8 +770,20 @@ namespace GitTfs.Core
             }
             else
                 lowerBoundChangesetId = MaxChangesetId + 1;
-            Trace.WriteLine(RemoteRef + ": Getting changesets from " + lowerBoundChangesetId +
-                " to " + lastVersion + " ...", "info");
+
+            Trace.WriteLine(RemoteRef + ": Getting changesets from " + lowerBoundChangesetId + " to " + lastVersion + " ...", "info");
+
+            // (performance) If mappings then fetch only the changeSets from the specific paths and not from the whole trunk
+            // The following comment does not work since there is a common lowerBoundChangesetId (paging) for multiple mapping folders.
+            //if (_mappingsFile.Mappings.Count > 0 && !string.IsNullOrWhiteSpace(TfsRepositoryPath))
+            //{
+            //    var m1 = _mappingsFile
+            //        .Mappings
+            //        .SelectMany(m => Tfs.GetChangesets(m.TfsPathWithRoot(TfsRepositoryPath), lowerBoundChangesetId, this, lastVersion, byLots))
+            //        .OrderBy(x => x.Summary.ChangesetId).ToList();
+            //    return m1;
+            //}
+            
             if (!IsSubtreeOwner)
                 return Tfs.GetChangesets(TfsRepositoryPath, lowerBoundChangesetId, this, lastVersion, byLots);
 
@@ -871,9 +888,10 @@ namespace GitTfs.Core
             {
                 var treeBuilder = workspace.Remote.Repository.GetTreeBuilder(parent);
                 result = changeset.Apply(parent, treeBuilder, workspace, entries, ignorableErrorHandler, Filters);
-                result.Tree = treeBuilder.GetTree();
+                if (result != null)
+                    result.Tree = treeBuilder.GetTree();
             });
-            if (!string.IsNullOrEmpty(parent)) result.CommitParents.Add(parent);
+            if (!string.IsNullOrEmpty(parent)) result?.CommitParents.Add(parent);
             return result;
         }
 

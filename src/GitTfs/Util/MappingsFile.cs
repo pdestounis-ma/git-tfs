@@ -86,7 +86,7 @@ namespace GitTfs.Util
                 SaveMappingFileInRepository(filePath, gitDir);
             }
 
-            Trace.WriteLine("Reading authors file : " + filePath);
+            Trace.WriteLine("Reading mappings file : " + filePath);
             return Parse(filePath);
 
         }

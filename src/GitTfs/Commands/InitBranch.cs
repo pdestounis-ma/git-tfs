@@ -144,6 +144,10 @@ namespace GitTfs.Commands
                 branchTfsRemote = defaultRemote.InitBranch(_remoteOptions, cbd.TfsRepositoryPath, cbd.RootChangesetId, !NoFetch, cbd.GitBranchNameExpected, fetchResult);
                 if (branchTfsRemote == null)
                 {
+                    //todo: get the branch with the target branch changeset id -- this will great an orphan branch on git -- do we want it?
+                    //cbd = new BranchCreationDatas() { RootChangesetId = rootBranch.TargetBranchChangesetId, TfsRepositoryPath = rootBranch.TfsBranchPath };
+                    //branchTfsRemote = defaultRemote.InitBranch(_remoteOptions, cbd.TfsRepositoryPath, cbd.RootChangesetId, !NoFetch, cbd.GitBranchNameExpected, fetchResult);
+                    //if (branchTfsRemote == null)
                     throw new GitTfsException("error: Couldn't fetch parent branch\n");
                 }
 
@@ -203,7 +207,8 @@ namespace GitTfs.Commands
             public Exception Error { get; set; }
         }
 
-        private HashSet<string> BlacklistedBranches;
+        private List<string> BlacklistedBranches;
+        private List<string> WhitelistedBranches;
 
         private int CloneAll(string gitRemote)
         {
@@ -252,13 +257,33 @@ namespace GitTfs.Commands
                 string blackListFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "blacklistedbranches.txt");
                 if (File.Exists(blackListFile))
                 {
-                    BlacklistedBranches = new HashSet<string>(File.ReadAllLines(blackListFile).Select(l => l.ToLower()));
-                    Trace.TraceInformation($"Blacklisting {BlacklistedBranches.Count} branches.");
+                    BlacklistedBranches = new List<string>(File.ReadAllLines(blackListFile).Select(l => l.ToLower()));
+                    Trace.TraceInformation($"Blacklisting {BlacklistedBranches.Count} branch prefix(es).");
                 }
                 else
-                    BlacklistedBranches = new HashSet<string>();
+                    BlacklistedBranches = new List<string>();
 
-                return InitializeBranches(defaultRemote, childBranchesToInit.Where (b => ! BlacklistedBranches.Contains (b.TfsRepositoryPath.ToLower ()))) ? GitTfsExitCodes.OK : GitTfsExitCodes.SomeDataCouldNotHaveBeenRetrieved;
+
+                string whitelistedFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "whitelistedbranches.txt");
+                if (File.Exists(whitelistedFile))
+                {
+                    WhitelistedBranches = new List<string>(File.ReadAllLines(whitelistedFile).Select(l => l.ToLower()));
+                    Trace.TraceInformation($"Whitelisting {WhitelistedBranches.Count} branch prefix(es).");
+                }
+                else
+                    WhitelistedBranches = new List<string>();
+
+
+                var childBranchPaths = childBranchesToInit.Where(branch =>
+                {
+                    var path = branch.TfsRepositoryPath.ToLower();
+
+                    return (BlacklistedBranches.Count == 0 || !BlacklistedBranches.Exists(black => path.StartsWith(black)))
+                        && (WhitelistedBranches.Count == 0 || WhitelistedBranches.Exists(white => path.StartsWith(white)));
+                    
+                }).ToList();
+                Trace.TraceInformation($"{childBranchPaths.Count} branches after filtering.");
+                return InitializeBranches(defaultRemote, childBranchPaths) ? GitTfsExitCodes.OK : GitTfsExitCodes.SomeDataCouldNotHaveBeenRetrieved;
             }
 
             return GitTfsExitCodes.OK;

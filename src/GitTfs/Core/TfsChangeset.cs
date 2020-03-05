@@ -105,6 +105,12 @@ namespace GitTfs.Core
             }
         }
 
+        public bool HasChanges(FileFilter filters)
+        {
+            var filteredChanges = _changeset.Changes.Where(cs => filters == null || filters.IncludeItem(cs));
+            return filteredChanges.Any();
+        }
+
         public IEnumerable<TfsTreeEntry> GetFullTree()
         {
             var treeInfo = Summary.Remote.Repository.CreateObjectsDictionary();

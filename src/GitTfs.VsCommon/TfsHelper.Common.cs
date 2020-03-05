@@ -716,7 +716,7 @@ namespace GitTfs.VsCommon
                 while (Directory.Exists(localDirectory))
                     localDirectory = baseFolder + $"-{i++}";
 
-                Trace.WriteLine($"Setting up a TFS workspace {remote.TfsRepositoryPath} => {localDirectory}");
+                Trace.TraceInformation($"Setting up a TFS workspace {remote.TfsRepositoryPath} => {localDirectory}");
                 
                 //add mappings to workplace
                 List<WorkingFolder> folders = null;
