@@ -53,9 +53,9 @@ namespace GitTfs.Util
         {
             if (ExtensionsToFilter.Any (e => change.Item.ServerItem.EndsWith (e, StringComparison.InvariantCultureIgnoreCase)))
                 return false;
-            if (WhiteListPaths != null && ! WhiteListPaths.Any (p => change.Item.ServerItem.StartsWith (p, StringComparison.InvariantCultureIgnoreCase)))
+            if (WhiteListPaths != null && WhiteListPaths.Count != 0 && !WhiteListPaths.Any(p => change.Item.ServerItem.StartsWith (p, StringComparison.InvariantCultureIgnoreCase)))
                 return false;
-            if (BlackListPaths != null && BlackListPaths.Any (p => change.Item.ServerItem.StartsWith (p, StringComparison.InvariantCultureIgnoreCase)))
+            if (BlackListPaths != null && BlackListPaths.Count != 0 && BlackListPaths.Any(p => change.Item.ServerItem.StartsWith (p, StringComparison.InvariantCultureIgnoreCase)))
                 return false;
 
             if (change.Item.ContentLength > MaxFileSize)
