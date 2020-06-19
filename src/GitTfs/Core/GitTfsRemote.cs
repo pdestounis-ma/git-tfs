@@ -397,6 +397,10 @@ namespace GitTfs.Core
                     var parentSha = (renameResult != null && renameResult.IsProcessingRenameChangeset) ? renameResult.LastParentCommitBeforeRename : MaxCommitHash;
                     var isFirstCommitInRepository = (parentSha == null);
                     var log = Apply(parentSha, changeset, objects);
+
+
+                    //if more than one mappings, then we might have multiple first commits
+                    //add the first commit:  && changeset.BaseChangesetId != 10793)
                     if (changeset.IsRenameChangeset && !isFirstCommitInRepository)
                     {
                         if (renameResult == null || !renameResult.IsProcessingRenameChangeset)
@@ -775,15 +779,15 @@ namespace GitTfs.Core
 
             // (performance) If mappings then fetch only the changeSets from the specific paths and not from the whole trunk
             // The following comment does not work since there is a common lowerBoundChangesetId (paging) for multiple mapping folders.
-            //if (_mappingsFile.Mappings.Count > 0 && !string.IsNullOrWhiteSpace(TfsRepositoryPath))
-            //{
-            //    var m1 = _mappingsFile
-            //        .Mappings
-            //        .SelectMany(m => Tfs.GetChangesets(m.TfsPathWithRoot(TfsRepositoryPath), lowerBoundChangesetId, this, lastVersion, byLots))
-            //        .OrderBy(x => x.Summary.ChangesetId).ToList();
-            //    return m1;
-            //}
-            
+            if (_mappingsFile.Mappings.Count > 0 && !string.IsNullOrWhiteSpace(TfsRepositoryPath))
+            {
+                var m1 = _mappingsFile
+                    .Mappings
+                    .SelectMany(m => Tfs.GetChangesets(m.TfsPathWithRoot(TfsRepositoryPath), lowerBoundChangesetId, this, lastVersion, byLots))
+                    .OrderBy(x => x.Summary.ChangesetId).ToList();
+                return m1;
+            }
+
             if (!IsSubtreeOwner)
                 return Tfs.GetChangesets(TfsRepositoryPath, lowerBoundChangesetId, this, lastVersion, byLots);
 
