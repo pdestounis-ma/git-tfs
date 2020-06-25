@@ -29,10 +29,13 @@ namespace GitTfs
                         v => AuthorsFilePath = v },
                     { "M|mapping=", "Path to a mapping file; a txt file in each line 2 paths separated by semicolon (;). The first path is the relative path in the TFS trunk and the second path the intended path in the target git repository",
                         v => MappingFilePath = v },
+                    { "excludedrenames=", "Path to a excluded renames file; a txt file in each line 1 changeset id that should not be marked as rename only commit",
+                        v => ExcludedRenamesFilePath = v },
                 };
             }
         }
         public string MappingFilePath { get; set; }
+        public string ExcludedRenamesFilePath { get; set; }
         public string AuthorsFilePath { get; set; }
         public bool ShowHelp { get; set; }
         public bool ShowVersion { get; set; }

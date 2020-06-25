@@ -14,15 +14,17 @@ namespace GitTfs.Core
         private readonly IChangeset _changeset;
         private readonly AuthorsFile _authors;
         private readonly MappingsFile _mappingsFile;
+        private readonly ExcludedRenamesFile _excludedRenamesFile;
         public TfsChangesetInfo Summary { get; set; }
         public int BaseChangesetId { get; set; }
 
-        public TfsChangeset(ITfsHelper tfs, IChangeset changeset, AuthorsFile authors, MappingsFile mappingsFile)
+        public TfsChangeset(ITfsHelper tfs, IChangeset changeset, AuthorsFile authors, MappingsFile mappingsFile, ExcludedRenamesFile excludedRenamesFile)
         {
             _tfs = tfs;
             _changeset = changeset;
             _authors = authors;
             _mappingsFile = mappingsFile;
+            _excludedRenamesFile = excludedRenamesFile;
             BaseChangesetId = _changeset.Changes.Max(c => c.Item.ChangesetId) - 1;
         }
 
@@ -42,7 +44,7 @@ namespace GitTfs.Core
             
             var remoteRelativeLocalPath = GetPathRelativeToWorkspaceLocalPath(workspace);
             var resolver = new PathResolver(Summary.Remote, remoteRelativeLocalPath, initialTree);
-            var sieve = new ChangeSieve(_changeset, resolver, filters);
+            var sieve = new ChangeSieve(_changeset, resolver, filters, _excludedRenamesFile);
             if (sieve.RenameBranchCommmit)
             {
                 IsRenameChangeset = true;

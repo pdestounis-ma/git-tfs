@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using GitTfs.Core;
@@ -32,12 +33,17 @@ namespace GitTfs.Util
 
     public class ChangeSieve
     {
+        private IChangeset _changeset;
         private readonly PathResolver _resolver;
+        private ExcludedRenamesFile _excludedRenamesFile;
         private readonly IEnumerable<NamedChange> _namedChanges;
 
-        public ChangeSieve(IChangeset changeset, PathResolver resolver, FileFilter filters)
+
+        public ChangeSieve(IChangeset changeset, PathResolver resolver, FileFilter filters, ExcludedRenamesFile excludedRenamesFile)
         {
+            _changeset = changeset;
             _resolver = resolver;
+            _excludedRenamesFile = excludedRenamesFile;
 
             var filteredChanges = changeset.Changes.Where (cs => filters == null || filters.IncludeItem (cs));
             _namedChanges = filteredChanges.Select(c => new NamedChange
@@ -64,6 +70,17 @@ namespace GitTfs.Util
                         c.Change.Item.ItemType == TfsItemType.Folder
                             && c.GitPath == string.Empty
                             && c.Change.ChangeType.IncludesOneOf(TfsChangeType.Delete, TfsChangeType.Rename));
+
+                    if (_renameBranchCommmit.Value)
+                    {
+                        Trace.TraceWarning($"Changeset {_changeset.ChangesetId} is rename-branch commit");
+                        if (_excludedRenamesFile.List.Any(c => c == _changeset.ChangesetId))
+                        {
+                            Trace.TraceWarning($"Changeset {_changeset.ChangesetId} is rename-branch commit but in the excluded list");
+                            return false;
+                        }
+
+                    }
                 }
                 return _renameBranchCommmit.Value;
             }

@@ -22,10 +22,11 @@ namespace GitTfs
         private readonly Bootstrapper _bootstrapper;
         private readonly AuthorsFile _authorsFileHelper;
         private readonly MappingsFile _mappingsFileHelper;
+        private readonly ExcludedRenamesFile _excludedRenamesFile;
 
         public GitTfs(GitTfsCommandFactory commandFactory, IHelpHelper help, IContainer container,
             IGitTfsVersionProvider gitTfsVersionProvider, GitTfsCommandRunner runner, Globals globals, Bootstrapper bootstrapper, AuthorsFile authorsFileHelper,
-            MappingsFile mappingsFileHelper)
+            MappingsFile mappingsFileHelper, ExcludedRenamesFile excludedRenamesFile)
         {
             _commandFactory = commandFactory;
             _help = help;
@@ -36,6 +37,7 @@ namespace GitTfs
             _bootstrapper = bootstrapper;
             _authorsFileHelper = authorsFileHelper;
             _mappingsFileHelper = mappingsFileHelper;
+            _excludedRenamesFile = excludedRenamesFile;
         }
 
         public int Run(IList<string> args)
@@ -50,12 +52,14 @@ namespace GitTfs
             bool willCreateRepository = command.GetType() == typeof(Clone) || command.GetType() == typeof(Init);
             ParseAuthorsAndSave(!willCreateRepository);
             ParseMappingsAndSave(!willCreateRepository);
+            ParseExcludedRenamesAndSave(!willCreateRepository);
+            
             var exitCode = Main(command, unparsedArgs);
             if (willCreateRepository)
             {
                 _authorsFileHelper.SaveAuthorFileInRepository(_globals.AuthorsFilePath, _globals.GitDir);
-					 _mappingsFileHelper.SaveMappingFileInRepository(_globals.MappingFilePath, _globals.GitDir);
-                
+                _mappingsFileHelper.SaveMappingFileInRepository(_globals.MappingFilePath, _globals.GitDir);
+                _excludedRenamesFile.SaveExcludedRenamesFileInRepository(_globals.ExcludedRenamesFilePath, _globals.GitDir);
             }
             return exitCode;
         }
@@ -127,7 +131,23 @@ namespace GitTfs
                 if (!string.IsNullOrEmpty(_globals.MappingFilePath))
                     throw;
                 Trace.TraceWarning("warning: mapping file ignored due to a problem occuring when reading it :\n\t" + ex.Message);
-                Trace.TraceWarning("         Verify the file :" + Path.Combine(_globals.GitDir, MappingsFile.GitTfsCachedMappingFileName));
+                Trace.TraceWarning("Verify the file :" + Path.Combine(_globals.GitDir, MappingsFile.GitTfsCachedMappingFileName));
+            }
+        }
+
+        private void ParseExcludedRenamesAndSave(bool couldSaveAuthorFile)
+        {
+            try
+            {
+                _container.GetInstance<ExcludedRenamesFile>().Parse(_globals.ExcludedRenamesFilePath, _globals.GitDir, couldSaveAuthorFile);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine("Error when parsing Excluded renames file:" + ex);
+                if (!string.IsNullOrEmpty(_globals.MappingFilePath))
+                    throw;
+                Trace.TraceWarning("warning: Excluded renames file ignored due to a problem occuring when reading it :\n\t" + ex.Message);
+                Trace.TraceWarning("Verify the file :" + Path.Combine(_globals.GitDir, ExcludedRenamesFile.GitTfsCachedMappingFileName));
             }
         }
 

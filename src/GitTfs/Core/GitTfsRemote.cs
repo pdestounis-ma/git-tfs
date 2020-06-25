@@ -385,6 +385,7 @@ namespace GitTfs.Core
                     {
                         MaxChangesetId = changeset.Summary.ChangesetId;
                         fetchResult.LastFetchedChangesetId = changeset.Summary.ChangesetId;
+                        Trace.TraceWarning($"!changeset{changeset.BaseChangesetId}.HasChanges");
                         continue;
                     }
 
@@ -392,6 +393,7 @@ namespace GitTfs.Core
                     {
                         fetchResult.NewChangesetCount--; // Merge wasn't successful - so don't count the changeset we found
                         fetchResult.IsSuccess = false;
+                        Trace.TraceWarning($"changeset{changeset.BaseChangesetId}.IsMergeChangeset");
                         return fetchResult;
                     }
                     var parentSha = (renameResult != null && renameResult.IsProcessingRenameChangeset) ? renameResult.LastParentCommitBeforeRename : MaxCommitHash;
@@ -407,6 +409,7 @@ namespace GitTfs.Core
                         {
                             fetchResult.IsProcessingRenameChangeset = true;
                             fetchResult.LastParentCommitBeforeRename = MaxCommitHash;
+                            Trace.TraceWarning($"changeset{changeset.BaseChangesetId}.IsRenameChangeset");
                             return fetchResult;
                         }
                         renameResult.IsProcessingRenameChangeset = false;

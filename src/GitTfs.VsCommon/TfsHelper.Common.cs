@@ -186,6 +186,8 @@ namespace GitTfs.VsCommon
                 changesets = Retry.Do(() => VersionControl.QueryHistory(path, lastChangeset, 0, RecursionType.Full,
                     null, startChangeset, lastChangeset, BatchCount, true, true, true, true)
                     .Cast<Changeset>().ToArray());
+
+                Trace.WriteLine($"changeSets length {changesets.Length} {startChangeset} {lastChangeset} ");
                 if (changesets.Length > 0)
                     start = changesets[changesets.Length - 1].ChangesetId + 1;
 
@@ -944,7 +946,7 @@ namespace GitTfs.VsCommon
                 _bridge.Wrap<WrapperForVersionControlServer, VersionControlServer>(VersionControl);
             // TODO - containerify this (no `new`)!
             var fakeChangeset = new Unshelveable(shelveset, change, wrapperForVersionControlServer, _bridge);
-            var tfsChangeset = new TfsChangeset(remote.Tfs, fakeChangeset, null, null) { Summary = new TfsChangesetInfo { Remote = remote } };
+            var tfsChangeset = new TfsChangeset(remote.Tfs, fakeChangeset, null, null, null) { Summary = new TfsChangesetInfo { Remote = remote } };
             return tfsChangeset;
         }
 

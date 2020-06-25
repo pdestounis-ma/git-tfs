@@ -131,4 +131,107 @@ namespace GitTfs.Util
        
 
     }
+
+    [StructureMapSingleton]
+    public class ExcludedRenamesFile
+    {
+        private readonly List<int> _list = new List<int>();
+
+        public ExcludedRenamesFile()
+        { }
+
+        public bool IsParseSuccessfull { get; set; }
+
+        public static string GitTfsCachedMappingFileName = "git-tfs_excluded_renames";
+
+        public List<int> List => _list;
+
+
+        public bool Parse(string filePath)
+        {
+            try
+            {
+                _list.Clear();
+                var list = File.ReadAllLines(filePath)
+                                .Where(line => !string.IsNullOrWhiteSpace(line))
+                                .Select(line=>line.Trim())
+                                .Where(line =>
+                                {
+                                    int result = 0;
+                                    return int.TryParse(line, out result);
+                                })
+                                .Select(int.Parse);
+                _list.AddRange(list);
+            }
+            catch (Exception e)
+            {
+                throw new GitTfsException($"Unable to parse excluded renames file {filePath}", e);
+            }
+
+            IsParseSuccessfull = true;
+            return true;
+        }
+
+        public bool Parse(string filePath, string gitDir, bool couldSave)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return LoadExcludedRenamesFromSavedFile(gitDir);
+            }
+
+            if (!File.Exists(filePath))
+            {
+                throw new GitTfsException("Excluded renames file cannot be found: '" + filePath + "'");
+            }
+
+            if (couldSave)
+            {
+                SaveExcludedRenamesFileInRepository(filePath, gitDir);
+            }
+
+            Trace.WriteLine("Reading Excluded renames file : " + filePath);
+            return Parse(filePath);
+
+        }
+
+        private string GetSavedExcludedRenamesFilePath(string gitDir)
+        {
+            return Path.Combine(gitDir, GitTfsCachedMappingFileName);
+        }
+
+        public void SaveExcludedRenamesFileInRepository(string filePath, string gitDir)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                return;
+
+            var savedExcludedRenamesFilePath = GetSavedExcludedRenamesFilePath(gitDir);
+            try
+            {
+                File.Copy(filePath, savedExcludedRenamesFilePath, true);
+            }
+            catch (Exception)
+            {
+                Trace.TraceWarning("Failed to copy Excluded renames file from \"" + filePath + "\" to \"" +
+                                   savedExcludedRenamesFilePath + "\".");
+            }
+        }
+
+        public bool LoadExcludedRenamesFromSavedFile(string gitDir)
+        {
+            var savedExcludedRenamesFilePath = GetSavedExcludedRenamesFilePath(gitDir);
+            if (!File.Exists(savedExcludedRenamesFilePath))
+            {
+                Trace.WriteLine("No Excluded renames file used.");
+                return false;
+            }
+
+            if (List.Count != 0)
+                return true;
+            Trace.WriteLine("Reading cached Excluded renames file (" + savedExcludedRenamesFilePath + ")...");
+            return Parse(savedExcludedRenamesFilePath);
+        }
+
+
+
+    }
 }
