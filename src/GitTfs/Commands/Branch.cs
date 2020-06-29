@@ -38,6 +38,7 @@ namespace GitTfs.Commands
         public string TfsUsername { get; set; }
         public string TfsPassword { get; set; }
         public string ParentBranch { get; set; }
+        public int ParentChangeSet { get; set; }
 
         public OptionSet OptionSet
         {
@@ -59,6 +60,14 @@ namespace GitTfs.Commands
                     { "b|tfs-parent-branch=", "TFS Parent branch of the TFS branch to clone (TFS 2008 only! And required!!) ex: $/Repository/ProjectParentBranch", v => ParentBranch = v },
                     { "u|username=", "TFS username", v => TfsUsername = v },
                     { "p|password=", "TFS password", v => TfsPassword = v },
+                    { "c|tfs-parent-changeset=", "TFS Parent Changeset Id of the TFS branch to clone . In general this parameter should be left uninitialized and used only when the auto-discovered changeset is not in the git repository (e.g. when changeset contains black-listed folders) ", v =>
+                        {
+                            var pc = -1;
+                            if (!int.TryParse(v, out pc))
+                                pc = -1;
+                            ParentChangeSet = pc;
+                        }
+                    },
                 }
                 .Merge(_globals.OptionSet);
             }
@@ -66,6 +75,7 @@ namespace GitTfs.Commands
 
         public Branch(Globals globals, Help helper, Cleanup cleanup, InitBranch initBranch, Rcheckin rcheckin)
         {
+            ParentChangeSet = -1;
             _globals = globals;
             _helper = helper;
             _cleanup = cleanup;
@@ -79,6 +89,7 @@ namespace GitTfs.Commands
             _initBranch.TfsPassword = TfsPassword;
             _initBranch.CloneAllBranches = ManageAll;
             _initBranch.ParentBranch = ParentBranch;
+            _initBranch.ParentChangeSet = ParentChangeSet;
             _initBranch.IgnoreRegex = IgnoreRegex;
             _initBranch.ExceptRegex = ExceptRegex;
             _initBranch.NoFetch = NoFetch;

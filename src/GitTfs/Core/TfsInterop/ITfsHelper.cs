@@ -27,7 +27,7 @@ namespace GitTfs.Core.TfsInterop
         bool CanShowCheckinDialog { get; }
         int ShowCheckinDialog(IWorkspace workspace, IPendingChange[] pendingChanges, IEnumerable<IWorkItemCheckedInfo> checkedInfos, string checkinComment);
         void CleanupWorkspaces(string workingDirectory);
-        IList<RootBranch> GetRootChangesetForBranch(string tfsPathBranchToCreate, int lastChangesetIdToCheck = -1, string tfsPathParentBranch = null);
+        IList<RootBranch> GetRootChangesetForBranch(string tfsPathBranchToCreate, int lastChangesetIdToCheck = -1, string tfsPathParentBranch = null, int tfsParentChangeset = -1);
         IEnumerable<TfsLabel> GetLabels(string tfsPathBranch, string nameFilter = null);
         bool CanGetBranchInformation { get; }
         IEnumerable<string> GetAllTfsRootBranchesOrderedByCreation();

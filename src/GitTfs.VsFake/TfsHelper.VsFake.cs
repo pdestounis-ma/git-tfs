@@ -392,7 +392,7 @@ namespace GitTfs.VsFake
             return new Changeset(_versionControlServer, _script.Changesets.First(c => c.Id == changesetId));
         }
 
-        public IList<RootBranch> GetRootChangesetForBranch(string tfsPathBranchToCreate, int lastChangesetIdToCheck = -1, string tfsPathParentBranch = null)
+        public IList<RootBranch> GetRootChangesetForBranch(string tfsPathBranchToCreate, int lastChangesetIdToCheck = -1, string tfsPathParentBranch = null, int tfsParentChangeSet = -1)
         {
             var branchChangesets = _script.Changesets.Where(c => c.IsBranchChangeset);
             var firstBranchChangeset = branchChangesets.FirstOrDefault(c => c.BranchChangesetDatas.BranchPath == tfsPathBranchToCreate);

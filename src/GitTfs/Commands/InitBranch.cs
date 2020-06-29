@@ -21,6 +21,8 @@ namespace GitTfs.Commands
         public string IgnoreRegex { get; set; }
         public string ExceptRegex { get; set; }
         public string ParentBranch { get; set; }
+
+        public int ParentChangeSet { get; set; }
         public bool CloneAllBranches { get; set; }
         public bool NoFetch { get; set; }
         public bool DontCreateGitBranch { get; set; }
@@ -29,6 +31,7 @@ namespace GitTfs.Commands
 
         public InitBranch(Globals globals, Help helper, AuthorsFile authors)
         {
+            ParentChangeSet = -1;
             _globals = globals;
             _helper = helper;
         }
@@ -41,6 +44,14 @@ namespace GitTfs.Commands
                 {
                     { "all", "Clone all the TFS branches (For TFS 2010 and later)", v => CloneAllBranches = (v.ToLower() == "all") },
                     { "b|tfs-parent-branch=", "TFS Parent branch of the TFS branch to clone (TFS 2008 only! And required!!) ex: $/Repository/ProjectParentBranch", v => ParentBranch = v },
+                    { "c|tfs-parent-changeset=", "TFS Parent Changeset Id of the TFS branch to clone . In general this parameter should be left uninitialized and used only when the auto-discovered changeset is not in the git repository (e.g. when changeset contains black-listed folders) ", v =>
+                        {
+                            var pc = -1;
+                            if (!int.TryParse(v, out pc))
+                                pc = -1;
+                            ParentChangeSet = pc;
+                        }
+                    },
                     { "u|username=", "TFS username", v => TfsUsername = v },
                     { "p|password=", "TFS password", v => TfsPassword = v },
                     { "ignore-regex=", "A regex of files to ignore", v => IgnoreRegex = v },
@@ -80,6 +91,8 @@ namespace GitTfs.Commands
 
         private int CloneBranch(string tfsBranchPath, string gitBranchNameExpected)
         {
+            Trace.WriteLine($"CloneBranch:tfsParentChangeSet:{ParentChangeSet}");
+
             var defaultRemote = InitFromDefaultRemote();
 
             // TFS representations of repository paths do not have trailing slashes
@@ -106,14 +119,14 @@ namespace GitTfs.Commands
 
             IList<RootBranch> creationBranchData;
             if (ParentBranch == null)
-                creationBranchData = defaultRemote.Tfs.GetRootChangesetForBranch(tfsBranchPath);
+                creationBranchData = defaultRemote.Tfs.GetRootChangesetForBranch(tfsBranchPath, tfsParentChangeset: ParentChangeSet);
             else
             {
                 var tfsRepositoryPathParentBranchFound = allRemotes.FirstOrDefault(r => r.TfsRepositoryPath.ToLower() == ParentBranch.ToLower());
                 if (tfsRepositoryPathParentBranchFound == null)
                     throw new GitTfsException("error: The Tfs parent branch '" + ParentBranch + "' can not be found in the Git repository\nPlease init it first and try again...\n");
 
-                creationBranchData = defaultRemote.Tfs.GetRootChangesetForBranch(tfsBranchPath, -1, tfsRepositoryPathParentBranchFound.TfsRepositoryPath);
+                creationBranchData = defaultRemote.Tfs.GetRootChangesetForBranch(tfsBranchPath, -1, tfsRepositoryPathParentBranchFound.TfsRepositoryPath, tfsParentChangeset: ParentChangeSet);
             }
 
             IFetchResult fetchResult;
@@ -144,7 +157,7 @@ namespace GitTfs.Commands
                 branchTfsRemote = defaultRemote.InitBranch(_remoteOptions, cbd.TfsRepositoryPath, cbd.RootChangesetId, !NoFetch, cbd.GitBranchNameExpected, fetchResult);
                 if (branchTfsRemote == null)
                 {
-                    //todo: get the branch with the target branch changeset id -- this will great an orphan branch on git -- do we want it?
+                    //todo: get the branch with the target branch changeset id -- this will create an orphan branch on git -- do we want it?
                     //cbd = new BranchCreationDatas() { RootChangesetId = rootBranch.TargetBranchChangesetId, TfsRepositoryPath = rootBranch.TfsBranchPath };
                     //branchTfsRemote = defaultRemote.InitBranch(_remoteOptions, cbd.TfsRepositoryPath, cbd.RootChangesetId, !NoFetch, cbd.GitBranchNameExpected, fetchResult);
                     //if (branchTfsRemote == null)

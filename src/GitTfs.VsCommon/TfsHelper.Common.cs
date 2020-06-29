@@ -266,15 +266,15 @@ namespace GitTfs.VsCommon
             return _bridge.Wrap<WrapperForBranchObject, BranchObject>(branches.Where(b => !b.Properties.RootItem.IsDeleted));
         }
 
-        public IList<RootBranch> GetRootChangesetForBranch(string tfsPathBranchToCreate, int lastChangesetIdToCheck = -1, string tfsPathParentBranch = null)
+        public IList<RootBranch> GetRootChangesetForBranch(string tfsPathBranchToCreate, int lastChangesetIdToCheck = -1, string tfsPathParentBranch = null, int tfsParentChangeSet = -1)
         {
             Trace.WriteLine("Looking for root changeset tree on " + tfsPathBranchToCreate);
             var rootBranches = new List<RootBranch>();
-            GetRootChangesetForBranch(rootBranches, tfsPathBranchToCreate, lastChangesetIdToCheck, tfsPathParentBranch);
+            GetRootChangesetForBranch(rootBranches, tfsPathBranchToCreate, lastChangesetIdToCheck, tfsPathParentBranch, tfsParentChangeSet);
             return rootBranches;
         }
 
-        private void GetRootChangesetForBranch(IList<RootBranch> rootBranches, string tfsPathBranchToCreate, int lastChangesetIdToCheck = -1, string tfsPathParentBranch = null)
+        private void GetRootChangesetForBranch(IList<RootBranch> rootBranches, string tfsPathBranchToCreate, int lastChangesetIdToCheck = -1, string tfsPathParentBranch = null, int tfsParentChangeSet = -1)
         {
             Trace.WriteLine("Looking for root changeset for branch:" + tfsPathBranchToCreate);
 
@@ -356,7 +356,7 @@ namespace GitTfs.VsCommon
 
                         foreach (var changeset in changesets)
                         {
-                            var branchChangesetsInTargetBranchForBatch = GetMergeInfo(tfsPathBranchToCreate, tfsPathParentBranch, changeset.ChangesetId, lastChangesetIdToCheck);
+                            var branchChangesetsInTargetBranchForBatch = GetMergeInfo(tfsPathBranchToCreate, tfsPathParentBranch, changeset.ChangesetId, lastChangesetIdToCheck, tfsParentChangeSet);
 
                             if (branchChangesetsInTargetBranchForBatch.Any())
                             {
@@ -599,18 +599,58 @@ namespace GitTfs.VsCommon
         }
 
         private IEnumerable<MergeInfo> GetMergeInfo(string tfsPathBranchToCreate, string tfsPathParentBranch,
-            int firstChangesetInBranchToCreate, int lastChangesetIdToCheck)
+            int firstChangesetInBranchToCreate, int lastChangesetIdToCheck, int tfsParentChangeSet)
         {
-            var mergedItemsToFirstChangesetInBranchToCreate = new List<MergeInfo>();             
+            var mergedItemsToFirstChangesetInBranchToCreate = new List<MergeInfo>();
+
+            //if changeset has been provided as parameter
+            if (tfsParentChangeSet > 0)
+            {
+                mergedItemsToFirstChangesetInBranchToCreate.Add(
+                    new MergeInfo
+                    {
+                        SourceChangeType = ChangeType.Add | ChangeType.Rename,
+                        SourceItem = tfsPathBranchToCreate,
+                        SourceChangeset = tfsParentChangeSet,
+                        TargetItem = tfsPathParentBranch,
+                        TargetChangeset = firstChangesetInBranchToCreate,
+                        TargetChangeType = ChangeType.Add
+                    }
+
+                );
+                return mergedItemsToFirstChangesetInBranchToCreate;
+            }
+            
             IEnumerable<ExtendedMerge> merges = Retry.Do ( () => VersionControl
                 .TrackMerges(new int[] { firstChangesetInBranchToCreate },
                     new ItemIdentifier(tfsPathBranchToCreate),
                     new ItemIdentifier[] { new ItemIdentifier(tfsPathParentBranch), },
                     null)
                 .OrderByDescending(x => x.SourceChangeset.ChangesetId));
+
+            //get current remote and filter
+            var remote = _container.GetInstance<Globals>().Repository.GetLastParentTfsCommits("HEAD").Select(commit => commit.Remote).First();
+            var filters = (remote as GitTfsRemote)?.Filters;
+            
             MergeInfo lastMerge = null;
             foreach (var extendedMerge in merges)
             {
+                //Trace.WriteLine($"---{extendedMerge.SourceChangeset.ChangesetId} {extendedMerge.SourceChangeset.Comment} {extendedMerge.SourceChangeset.CommitterDisplayName}");
+
+                //if no last merge (performance: not do this for all merges - but until the first is found)
+                if (lastMerge == null)
+                {
+                    var startChangeset = new ChangesetVersionSpec(extendedMerge.SourceChangeset.ChangesetId);
+                    var changeset = Retry.Do(() => VersionControl.QueryHistory(tfsPathParentBranch, VersionSpec.Latest, 0, RecursionType.Full,
+                            null, startChangeset, startChangeset, 1, true, true, true, true)
+                        .Cast<Changeset>().ToArray()).FirstOrDefault();
+
+                    //check if all changes are black-listed
+                    if (changeset != null &&
+                        !BuildTfsChangeset(changeset, remote).HasChanges(filters))
+                        continue;
+                }
+
                 var sourceItem = extendedMerge.SourceItem.Item.ServerItem;
                 var targetItem = extendedMerge.TargetItem != null ? extendedMerge.TargetItem.Item : null;
                 var targetChangeType = extendedMerge.TargetItem != null ? extendedMerge.TargetItem.ChangeType : 0;
