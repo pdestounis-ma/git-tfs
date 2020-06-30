@@ -44,7 +44,7 @@ namespace GitTfs.Commands
                 {
                     { "all", "Clone all the TFS branches (For TFS 2010 and later)", v => CloneAllBranches = (v.ToLower() == "all") },
                     { "b|tfs-parent-branch=", "TFS Parent branch of the TFS branch to clone (TFS 2008 only! And required!!) ex: $/Repository/ProjectParentBranch", v => ParentBranch = v },
-                    { "c|tfs-parent-changeset=", "TFS Parent Changeset Id of the TFS branch to clone . In general this parameter should be left uninitialized and used only when the auto-discovered changeset is not in the git repository (e.g. when changeset contains black-listed folders) ", v =>
+                    { "c|tfs-parent-changeset=", "TFS Parent Changeset Id of the TFS branch to clone. In general this parameter should be left uninitialized and used only when the auto-discovered changeset is not in the git repository (e.g. when changeset contains black-listed folders) ", v =>
                         {
                             var pc = -1;
                             if (!int.TryParse(v, out pc))

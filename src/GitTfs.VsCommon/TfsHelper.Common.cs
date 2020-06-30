@@ -629,8 +629,19 @@ namespace GitTfs.VsCommon
                 .OrderByDescending(x => x.SourceChangeset.ChangesetId));
 
             //get current remote and filter
-            var remote = _container.GetInstance<Globals>().Repository.GetLastParentTfsCommits("HEAD").Select(commit => commit.Remote).First();
-            var filters = (remote as GitTfsRemote)?.Filters;
+            IGitTfsRemote remote = null;
+            FileFilter filters = null;
+
+            try
+            {
+                remote = _container.GetInstance<Globals>().Repository.GetLastParentTfsCommits("HEAD").Select(commit => commit.Remote).First();
+                filters = (remote as GitTfsRemote)?.Filters;
+            }
+            catch
+            {
+                remote = null;
+                filters = null;
+            }
             
             MergeInfo lastMerge = null;
             foreach (var extendedMerge in merges)
@@ -638,7 +649,7 @@ namespace GitTfs.VsCommon
                 //Trace.WriteLine($"---{extendedMerge.SourceChangeset.ChangesetId} {extendedMerge.SourceChangeset.Comment} {extendedMerge.SourceChangeset.CommitterDisplayName}");
 
                 //if no last merge (performance: not do this for all merges - but until the first is found)
-                if (lastMerge == null)
+                if (lastMerge == null && remote != null)
                 {
                     var startChangeset = new ChangesetVersionSpec(extendedMerge.SourceChangeset.ChangesetId);
                     var changeset = Retry.Do(() => VersionControl.QueryHistory(tfsPathParentBranch, VersionSpec.Latest, 0, RecursionType.Full,
