@@ -303,6 +303,15 @@ namespace GitTfs.VsCommon
                     throw new GitTfsException("error: TFS branches " + tfsPathBranchToCreate + " not found!");
                 }
 
+                string tfsRealNameOfBranch;
+                if (!AllTfsBranchesNames.TryGetValue(tfsPathBranchToCreate, out tfsRealNameOfBranch))
+                {
+                    throw new GitTfsException("error: TFS branches " + tfsPathBranchToCreate + " not found!");
+                }
+                Trace.WriteLine($"Changing branch name from {tfsPathBranchToCreate} to {tfsRealNameOfBranch}");
+                tfsPathBranchToCreate = tfsRealNameOfBranch;
+               
+
                 if (tfsParentBranch == null)
                 {
                     Trace.WriteLine("There is no parent branch for " + tfsPathBranchToCreate + ". Ignoring.");
@@ -468,6 +477,22 @@ namespace GitTfs.VsCommon
                         b => b.Properties.ParentBranch != null ? b.Properties.ParentBranch.Item : null,
                         (StringComparer.OrdinalIgnoreCase));
                 return _allTfsBranches;
+            }
+        }
+
+        private IDictionary<string, string> _allTfsBranchesNames;
+        private IDictionary<string, string> AllTfsBranchesNames
+        {
+            get
+            {
+                if (_allTfsBranchesNames != null)
+                    return _allTfsBranchesNames;
+                Trace.WriteLine("Looking for all branches names...");
+                _allTfsBranchesNames = VersionControl.QueryRootBranchObjects(RecursionType.Full)
+                    .ToDictionary(b => b.Properties.RootItem.Item,
+                        b => b.Properties.RootItem.Item,
+                        (StringComparer.OrdinalIgnoreCase));
+                return _allTfsBranchesNames;
             }
         }
 

@@ -240,7 +240,7 @@ namespace GitTfs.Commands
             else
             {
                 var gitRepositoryBranchRemotes = defaultRemote.Repository.GetGitRemoteBranches(gitRemote);
-                var childBranchPaths = new Dictionary<string, BranchDatas>();
+                var childBranchPaths = new Dictionary<string, BranchDatas>(StringComparer.OrdinalIgnoreCase);
                 foreach (var branchRemote in gitRepositoryBranchRemotes)
                 {
                     var branchRemoteChangesetInfos = _globals.Repository.GetLastParentTfsCommits(branchRemote);

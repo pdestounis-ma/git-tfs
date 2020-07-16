@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -271,7 +272,7 @@ namespace GitTfs.Core
         {
             // does this need to ensuretfsauthenticated?
             _repository.Config.Set("tfs.touch", "1"); // reload configuration, because `git tfs init` and `git tfs clone` use Process.Start to update the config, so _repository's copy is out of date.
-            var remotes = _remoteConfigReader.Load(_repository.Config).Select(x => BuildRemote(x)).ToDictionary(x => x.Id);
+            var remotes = _remoteConfigReader.Load(_repository.Config).Select(x => BuildRemote(x)).ToDictionary(x => x.Id, x => x, StringComparer.OrdinalIgnoreCase);
 
             bool shouldExport = GetConfig(GitTfsConstants.ExportMetadatasConfigKey) == "true";
 
