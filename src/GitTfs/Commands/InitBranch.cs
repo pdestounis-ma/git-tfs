@@ -151,6 +151,8 @@ namespace GitTfs.Commands
                 Trace.WriteLine("Processing " + (rootBranch.IsRenamedBranch ? "renamed " : string.Empty) + "branch :"
                     + rootBranch.TfsBranchPath + " (" + rootBranch.SourceBranchChangesetId + ")");
                 var cbd = new BranchCreationDatas() { RootChangesetId = rootBranch.SourceBranchChangesetId, TfsRepositoryPath = rootBranch.TfsBranchPath };
+
+                Trace.TraceWarning($"cbd.GitBranchNameExpected {cbd.TfsRepositoryPath} {tfsBranchPath} {gitBranchNameExpected}");
                 if (cbd.TfsRepositoryPath == tfsBranchPath)
                     cbd.GitBranchNameExpected = gitBranchNameExpected;
 

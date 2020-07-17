@@ -303,15 +303,6 @@ namespace GitTfs.VsCommon
                     throw new GitTfsException("error: TFS branches " + tfsPathBranchToCreate + " not found!");
                 }
 
-                string tfsRealNameOfBranch;
-                if (!AllTfsBranchesNames.TryGetValue(tfsPathBranchToCreate, out tfsRealNameOfBranch))
-                {
-                    throw new GitTfsException("error: TFS branches " + tfsPathBranchToCreate + " not found!");
-                }
-                Trace.WriteLine($"Changing branch name from {tfsPathBranchToCreate} to {tfsRealNameOfBranch}");
-                tfsPathBranchToCreate = tfsRealNameOfBranch;
-               
-
                 if (tfsParentBranch == null)
                 {
                     Trace.WriteLine("There is no parent branch for " + tfsPathBranchToCreate + ". Ignoring.");
@@ -322,6 +313,14 @@ namespace GitTfs.VsCommon
                 Trace.WriteLine("Found parent branch : " + tfsPathParentBranch);
 
 
+                string tfsRealNameOfBranch;
+                if (!AllTfsBranchesNames.TryGetValue(tfsPathBranchToCreate, out tfsRealNameOfBranch))
+                {
+                    throw new GitTfsException("error: TFS branches " + tfsPathBranchToCreate + " not found!");
+                }
+                Trace.WriteLine($"Changing tfs branch name from {tfsPathBranchToCreate} to {tfsRealNameOfBranch}");
+                tfsPathBranchToCreate = tfsRealNameOfBranch;
+               
                 try
                 {
                     // This method now handles the scenario where a valid branch has been detected for migration but its
