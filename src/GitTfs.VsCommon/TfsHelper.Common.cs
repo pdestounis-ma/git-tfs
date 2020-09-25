@@ -312,15 +312,22 @@ namespace GitTfs.VsCommon
                 tfsPathParentBranch = tfsParentBranch;
                 Trace.WriteLine("Found parent branch : " + tfsPathParentBranch);
 
+                
 
                 string tfsRealNameOfBranch;
                 if (!AllTfsBranchesNames.TryGetValue(tfsPathBranchToCreate, out tfsRealNameOfBranch))
                 {
                     throw new GitTfsException("error: TFS branches " + tfsPathBranchToCreate + " not found!");
                 }
-                Trace.WriteLine($"Changing tfs branch name from {tfsPathBranchToCreate} to {tfsRealNameOfBranch}");
+                Trace.WriteLine($"Changing tfs branch name from existing tfs branches - {tfsPathBranchToCreate} to {tfsRealNameOfBranch}");
                 tfsPathBranchToCreate = tfsRealNameOfBranch;
-               
+
+
+                var remoteTfsPaths = _container.GetInstance<Globals>().Repository.ReadAllTfsRemotes().Select(r=>r.TfsRepositoryPath).ToList();
+                tfsRealNameOfBranch = TfsPath.FindPathWithLongestPrefix(remoteTfsPaths, tfsPathBranchToCreate);
+                Trace.WriteLine($"Changing tfs branch name from existing mapped tfs branches (longest path) - {tfsPathBranchToCreate} to {tfsRealNameOfBranch}");
+                tfsPathBranchToCreate = tfsRealNameOfBranch;
+
                 try
                 {
                     // This method now handles the scenario where a valid branch has been detected for migration but its
@@ -1638,4 +1645,90 @@ namespace GitTfs.VsCommon
             }
         }
     }
+
+    public class TfsPath
+    {
+        public TfsPath(string path)
+        {
+            Segments = (path ?? string.Empty).Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+        }
+
+        public TfsPath(List<string> segments)
+        {
+            Segments = segments ?? new List<string>();
+        }
+
+        public int Length => Segments.Count;
+
+        public List<string> Segments { get; private set; }
+
+        public TfsPath SubPath(int start, int length = -1)
+        {
+            if (length == -1)
+                length = Length - start;
+
+            return new TfsPath(Segments.Skip(start).Take(length).ToList());
+        }
+
+        public TfsPath Combine(TfsPath input)
+        {
+            return new TfsPath(Segments.Concat(input.Segments).ToList());
+        }
+
+        public override string ToString()
+        {
+            return string.Join("/", Segments);
+        }
+
+        public PrefixMatch CommonPrefix(TfsPath input)
+        {
+            var match = new PrefixMatch()
+            {
+                Path = this,
+                Length = 0
+            };
+
+            var size = Math.Min(Length, input.Length);
+
+            match.Length = 0;
+            while (match.Length < size && string.Equals(input.Segments[match.Length], Segments[match.Length], StringComparison.OrdinalIgnoreCase))
+            {
+                match.Length++;
+            }
+
+            return match;
+        }
+
+        public class PrefixMatch
+        {
+            public TfsPath Path { get; set; }
+            public int Length { get; set; }
+        }
+
+        public static string FindPathWithLongestPrefix(IEnumerable<string> paths, string input)
+        {
+            return FindPathWithLongestPrefix(paths.Select(p => new TfsPath(p)), new TfsPath(input));
+        }
+
+        public static string FindPathWithLongestPrefix(IEnumerable<TfsPath> paths, TfsPath input)
+        {
+            var longestMatch = new TfsPath.PrefixMatch() { Length = 0 };
+            foreach (var path in paths)
+            {
+                var match = path.CommonPrefix(input);
+                if (match.Length > longestMatch.Length)
+                    longestMatch = match;
+            }
+
+            return longestMatch.Path == null
+                     ? input.ToString()
+                     : longestMatch
+                        .Path
+                        .SubPath(0, longestMatch.Length)
+                        .Combine(input.SubPath(longestMatch.Length))
+                        .ToString();
+        }
+
+    }
+
 }
