@@ -117,6 +117,38 @@ namespace GitTfs.Commands
                 return GitTfsExitCodes.InvalidArguments;
             }
 
+
+            //assert if tfs path in blacklisted branches
+            string blackListFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "blacklistedbranches.txt");
+            if (File.Exists(blackListFile))
+            {
+                BlacklistedBranches = new List<string>(File.ReadAllLines(blackListFile).Select(l => l.ToLower()));
+                Trace.TraceInformation($"Blacklisting {BlacklistedBranches.Count} branch prefix(es).");
+            }
+            else
+                BlacklistedBranches = new List<string>();
+
+
+            string whitelistedFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "whitelistedbranches.txt");
+            if (File.Exists(whitelistedFile))
+            {
+                WhitelistedBranches = new List<string>(File.ReadAllLines(whitelistedFile).Select(l => l.ToLower()));
+                Trace.TraceInformation($"Whitelisting {WhitelistedBranches.Count} branch prefix(es).");
+            }
+            else
+                WhitelistedBranches = new List<string>();
+
+
+            var include = (BlacklistedBranches.Count == 0 || !BlacklistedBranches.Exists(black => tfsBranchPath.ToLower().StartsWith(black)))
+                       && (WhitelistedBranches.Count == 0 || WhitelistedBranches.Exists(white => tfsBranchPath.ToLower().StartsWith(white)));
+
+            if (!include)
+            {
+                Trace.TraceWarning($"Path {tfsBranchPath} blacklisted");
+                return GitTfsExitCodes.InvalidArguments;
+            }
+
+				
             IList<RootBranch> creationBranchData;
             if (ParentBranch == null)
                 creationBranchData = defaultRemote.Tfs.GetRootChangesetForBranch(tfsBranchPath, tfsParentChangeset: ParentChangeSet);
