@@ -782,14 +782,14 @@ namespace GitTfs.Core
 
             // (performance) If mappings then fetch only the changeSets from the specific paths and not from the whole trunk
             // The following comment does not work since there is a common lowerBoundChangesetId (paging) for multiple mapping folders.
-            if (_mappingsFile.Mappings.Count > 0 && !string.IsNullOrWhiteSpace(TfsRepositoryPath))
-            {
-                var m1 = _mappingsFile
-                    .Mappings
-                    .SelectMany(m => Tfs.GetChangesets(m.TfsPathWithRoot(TfsRepositoryPath), lowerBoundChangesetId, this, lastVersion, byLots))
-                    .OrderBy(x => x.Summary.ChangesetId).ToList();
-                return m1;
-            }
+            //if (_mappingsFile.Mappings.Count > 0 && !string.IsNullOrWhiteSpace(TfsRepositoryPath))
+            //{
+            //    var m1 = _mappingsFile
+            //        .Mappings
+            //        .SelectMany(m => Tfs.GetChangesets(m.TfsPathWithRoot(TfsRepositoryPath), lowerBoundChangesetId, this, lastVersion, byLots))
+            //        .OrderBy(x => x.Summary.ChangesetId).ToList();
+            //    return m1;
+            //}
 
             if (!IsSubtreeOwner)
                 return Tfs.GetChangesets(TfsRepositoryPath, lowerBoundChangesetId, this, lastVersion, byLots);
